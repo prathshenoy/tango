@@ -38,19 +38,10 @@ type Params struct {
 	Logger          *zap.Logger
 	Storage         storage.Storage
 	Orchestrator    orchestrator.Orchestrator
-	Scope           tally.Scope `optional:"true"`
-	MaxMessageBytes int         `optional:"true"`
-	// RepoConfig is the authoritative repository allowlist. RPC remotes must
-	// match it exactly before the controller performs cache I/O.
-	RepoConfig config.RepositoryConfigProvider
-	// GraphFormat mirrors ServiceConfig.GraphFormat; empty defaults to gob.
-	// It must match the orchestrator's configured format — both are wired
-	// from the same ServiceConfig.
-	GraphFormat string `optional:"true"`
-	// ShadowCompare mirrors ServiceConfig.ShadowCompare: with the TGB format,
-	// run the incumbent targetdiff comparison in the background on every
-	// GetChangedTargets and emit a mismatch metric on divergence.
-	ShadowCompare bool `optional:"true"`
+	Scope           tally.Scope               `optional:"true"`
+	MaxMessageBytes int                       `optional:"true"`
+	RepoConfig      config.RepositoryConfigProvider
+	GraphConfig     config.GraphConfigProvider `optional:"true"`
 }
 
 // resolveRequestRepository returns the configured repository and metric label
@@ -76,9 +67,8 @@ type controller struct {
 	orchestrator    orchestrator.Orchestrator
 	emitter         *metrics.Emitter
 	maxMessageBytes int
-	repoConfig      config.RepositoryConfigProvider
-	graphFormat     string
-	shadowCompare   bool
+	repoConfig  config.RepositoryConfigProvider
+	graphConfig config.GraphConfigProvider
 
 	// appCtx is the application lifetime; cancel it on process shutdown.
 	// Used by linkRequestCtx and any fire-and-forget goroutines so they
@@ -94,10 +84,6 @@ func NewController(appCtx context.Context, p Params) pb.TangoYARPCServer {
 	if maxMessageBytes <= 0 {
 		maxMessageBytes = config.DefaultMaxMessageBytes
 	}
-	graphFormat := p.GraphFormat
-	if graphFormat == "" {
-		graphFormat = config.GraphFormatGob
-	}
 	return &controller{
 		logger:          p.Logger,
 		storage:         p.Storage,
@@ -105,8 +91,7 @@ func NewController(appCtx context.Context, p Params) pb.TangoYARPCServer {
 		emitter:         emitter,
 		maxMessageBytes: maxMessageBytes,
 		repoConfig:      p.RepoConfig,
-		graphFormat:     graphFormat,
-		shadowCompare:   p.ShadowCompare,
+		graphConfig:     p.GraphConfig,
 		appCtx:          appCtx,
 	}
 }
@@ -131,4 +116,31 @@ func (c *controller) linkRequestCtx(reqCtx context.Context) (context.Context, co
 		stop()
 		cancel(nil)
 	}
+}
+
+// graphFormatFor returns the configured graph format for the given remote,
+// defaulting to gob when no GraphConfigProvider is set.
+func (c *controller) graphFormatFor(remote string) (string, error) {
+	if c.graphConfig == nil {
+		return config.GraphFormatGob, nil
+	}
+	gc, err := c.graphConfig.GetGraphConfig(remote)
+	if err != nil {
+		return "", err
+	}
+	return gc.Format, nil
+}
+
+// shadowCompareFor returns whether shadow comparison is enabled for the given
+// remote. Returns false when no GraphConfigProvider is set or the remote has
+// no config entry.
+func (c *controller) shadowCompareFor(remote string) bool {
+	if c.graphConfig == nil {
+		return false
+	}
+	gc, err := c.graphConfig.GetGraphConfig(remote)
+	if err != nil {
+		return false
+	}
+	return gc.ShadowCompare
 }

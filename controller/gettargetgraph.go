@@ -104,6 +104,10 @@ func (c *controller) getGraph(ctx context.Context, e *metrics.Emitter, req entit
 		zap.String("base_sha", req.Build.BaseSha),
 		zap.Stringer("strategy", req.Build.Strategy),
 	)
+	graphFormat, err := c.graphFormatFor(req.Build.Remote)
+	if err != nil {
+		return nil, tangoerrors.NewUser(fmt.Errorf("resolve graph config: %w", err))
+	}
 	if !req.BypassCache {
 		// Look up the the git treehash based on cache path
 		treehashCachePath := cachekey.GetTreehashCachePath(repositoryID, req.Build)
@@ -126,7 +130,7 @@ func (c *controller) getGraph(ctx context.Context, e *metrics.Emitter, req entit
 			logger.Info("getGraph: treehash found")
 			// Download the target graph based on treehash.
 			storageStart := time.Now()
-			graphReader, err := c.readCachedGraph(ctx, logger, repositoryID, string(treehashBytes), req.Build.Strategy, req.ExcludeFilesRegex)
+			graphReader, err := c.readCachedGraph(ctx, logger, graphFormat, repositoryID, string(treehashBytes), req.Build.Strategy, req.ExcludeFilesRegex)
 			if ctx.Err() != nil {
 				err = context.Cause(ctx)
 			}
@@ -164,13 +168,13 @@ func (c *controller) getGraph(ctx context.Context, e *metrics.Emitter, req entit
 }
 
 // readCachedGraph opens the cached graph for a resolved treehash, preferring
-// the TGB blob when the service is configured for it and falling back to the
-// gob stream for entries written before the format flip. A TGB blob that
+// the TGB blob when the repository is configured for it and falling back to
+// the gob stream for entries written before the format flip. A TGB blob that
 // exists but fails validation is treated as a miss (the orchestrator will
 // recompute and overwrite it), not an infra failure. Returns a not-found
 // error when neither format is present.
-func (c *controller) readCachedGraph(ctx context.Context, logger *zap.Logger, repositoryID, treehash string, strategy entity.ComputationStrategy, excludeFilesRegex []string) (storage.GraphReader, error) {
-	if c.graphFormat == config.GraphFormatTGB {
+func (c *controller) readCachedGraph(ctx context.Context, logger *zap.Logger, graphFormat, repositoryID, treehash string, strategy entity.ComputationStrategy, excludeFilesRegex []string) (storage.GraphReader, error) {
+	if graphFormat == config.GraphFormatTGB {
 		tgbPath := cachekey.GetTGBGraphByTreeHash(repositoryID, treehash, strategy, excludeFilesRegex)
 		graphReader, err := storage.NewTGBGraphReader(ctx, c.storage, tgbPath, c.maxMessageBytes)
 		if err == nil {

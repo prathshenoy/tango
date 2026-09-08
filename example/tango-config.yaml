@@ -34,5 +34,10 @@ service:
   # Root for origin clones and worker checkouts; required.
   workspaces_root_path: "/tmp/tango-repo-manager"
   max_message_bytes: 4250000
-  graph_format: "gob"
-  shadow_compare: false
+
+# Per-repository graph storage format. "default" applies to repos without an
+# explicit entry. Each entry's format must be "gob" or "tgb".
+graph:
+  default:
+    format: "gob"
+    shadow_compare: false

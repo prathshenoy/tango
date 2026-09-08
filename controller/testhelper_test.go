@@ -49,6 +49,14 @@ func newTestController(logger *zap.Logger) *controller {
 	}
 }
 
+type constantGraphConfig struct{ gc config.GraphConfig }
+
+func (c constantGraphConfig) GetGraphConfig(string) (config.GraphConfig, error) { return c.gc, nil }
+
+func staticGraphConfig(gc config.GraphConfig) config.GraphConfigProvider {
+	return constantGraphConfig{gc: gc}
+}
+
 // newGraphReader builds a storage.GraphReader from entity chunks
 // by writing JSON to in-memory storage and reading back.
 func newGraphReader(t *testing.T, chunks ...entity.GetTargetGraphResponse) storage.GraphReader {

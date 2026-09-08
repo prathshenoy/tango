@@ -172,7 +172,11 @@ func (b *nativeOrchestrator) GetTargetGraph(ctx context.Context, req entity.GetT
 		return nil, classifyGitError(fmt.Errorf("compute treehash for repository %s at %s: %w", repoCfg.RepositoryID, build.BaseSha, err))
 	}
 	treehashPath := cachekey.GetGraphByTreeHash(repoCfg.RepositoryID, treehash, build.Strategy, req.ExcludeFilesRegex)
-	useTGB := b.config.Service.GraphFormat == config.GraphFormatTGB
+	graphCfg, err := b.config.GetGraphConfig(build.Remote)
+	if err != nil {
+		return nil, tangoerrors.NewUser(fmt.Errorf("resolve graph config: %w", err))
+	}
+	useTGB := graphCfg.Format == config.GraphFormatTGB
 	tgbPath := cachekey.GetTGBGraphByTreeHash(repoCfg.RepositoryID, treehash, build.Strategy, req.ExcludeFilesRegex)
 	if !req.BypassCache {
 		cacheReadStart := time.Now()

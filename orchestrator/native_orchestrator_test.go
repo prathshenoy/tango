@@ -383,7 +383,9 @@ func TestNative_GetTargetGraph_TGBFormat(t *testing.T) {
 	}, nil)
 
 	cfg := testConfig(t)
-	cfg.Service.GraphFormat = config.GraphFormatTGB
+	cfg.Graph = map[string]config.GraphConfig{
+		"default": {Format: config.GraphFormatTGB},
+	}
 
 	o, err := NewNativeOrchestrator(appCtx, Params{
 		Storage:     st,
