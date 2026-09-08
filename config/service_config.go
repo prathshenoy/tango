@@ -25,7 +25,7 @@ type ServiceConfig struct {
 	// for origin clones and <workspaces_root_path>/.workers/<repo>/worker-{1..N}/
 	// for worker checkouts.
 	WorkspacesRootPath string `yaml:"workspaces_root_path"`
-	MaxMessageBytes int `yaml:"max_message_bytes"` // max serialized bytes per streamed gRPC message; 0 → DefaultMaxMessageBytes
+	MaxMessageBytes    int    `yaml:"max_message_bytes"` // max serialized bytes per streamed gRPC message; 0 → DefaultMaxMessageBytes
 }
 
 // DefaultMaxMessageBytes is the fallback max serialized size per streamed

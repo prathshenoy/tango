@@ -30,10 +30,10 @@ var (
 
 // Config is the root configuration structure.
 type Config struct {
-	Repository []RepositoryConfig       `yaml:"repository"`
-	Storage    StorageConfig            `yaml:"storage"`
-	Service    ServiceConfig            `yaml:"service"`
-	Graph      map[string]GraphConfig   `yaml:"graph"`
+	Repository []RepositoryConfig     `yaml:"repository"`
+	Storage    StorageConfig          `yaml:"storage"`
+	Service    ServiceConfig          `yaml:"service"`
+	Graph      map[string]GraphConfig `yaml:"graph"`
 
 	// repositoryByRemote is built at parse time for O(1) lookup.
 	repositoryByRemote map[string]*RepositoryConfig
