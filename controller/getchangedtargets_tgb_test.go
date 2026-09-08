@@ -124,13 +124,12 @@ func TestGetChangedTargets_TGBNativePath(t *testing.T) {
 
 	scope := tally.NewTestScope("", nil)
 	c := NewController(context.Background(), Params{
-		RepoConfig:    allowAnyRepositoryConfigProvider{},
-		Logger:        zaptest.NewLogger(t),
-		Storage:       st,
-		Orchestrator:  orchestratormock.NewMockOrchestrator(ctrl), // no calls expected: both graphs are cached
-		Scope:         scope,
-		GraphFormat:   config.GraphFormatTGB,
-		ShadowCompare: true,
+		RepoConfig:   allowAnyRepositoryConfigProvider{},
+		Logger:       zaptest.NewLogger(t),
+		Storage:      st,
+		Orchestrator: orchestratormock.NewMockOrchestrator(ctrl), // no calls expected: both graphs are cached
+		Scope:        scope,
+		GraphConfig:  staticGraphConfig(config.GraphConfig{Format: config.GraphFormatTGB, ShadowCompare: true}),
 	})
 
 	request := changedTargetsRequest()
@@ -240,7 +239,7 @@ func TestGetChangedTargets_TGBAllTargetsTrigger(t *testing.T) {
 		Storage:      st,
 		Orchestrator: orchestratormock.NewMockOrchestrator(ctrl),
 		Scope:        scope,
-		GraphFormat:  config.GraphFormatTGB,
+		GraphConfig:  staticGraphConfig(config.GraphConfig{Format: config.GraphFormatTGB}),
 	})
 
 	request := changedTargetsRequest()
@@ -272,19 +271,20 @@ func TestGetChangedTargets_TGBAllTargetsTriggerPreservesMembershipChanges(t *tes
 	seedTreehash(t, st, "sha1", "treehash1")
 	seedTreehash(t, st, "sha2", "treehash2")
 	require.NoError(t, storage.WriteTGBGraph(t.Context(), st,
-		cachekey.GetTGBGraphByTreeHash("repo:go-code", "treehash1", entity.ComputationStrategyUnset, nil),
+		cachekey.GetTGBGraphByTreeHash(testRepositoryID("repo:go-code"), "treehash1", entity.ComputationStrategyUnset, nil),
 		tgbAllTargetsClassificationBefore(map[string]string{".bazelrc": "old-hash"})))
 	require.NoError(t, storage.WriteTGBGraph(t.Context(), st,
-		cachekey.GetTGBGraphByTreeHash("repo:go-code", "treehash2", entity.ComputationStrategyUnset, nil),
+		cachekey.GetTGBGraphByTreeHash(testRepositoryID("repo:go-code"), "treehash2", entity.ComputationStrategyUnset, nil),
 		tgbAllTargetsClassificationAfter(map[string]string{".bazelrc": "new-hash"})))
 
 	scope := tally.NewTestScope("", nil)
 	c := NewController(context.Background(), Params{
+		RepoConfig:   allowAnyRepositoryConfigProvider{},
 		Logger:       zaptest.NewLogger(t),
 		Storage:      st,
 		Orchestrator: orchestratormock.NewMockOrchestrator(ctrl),
 		Scope:        scope,
-		GraphFormat:  config.GraphFormatTGB,
+		GraphConfig:  staticGraphConfig(config.GraphConfig{Format: config.GraphFormatTGB}),
 	})
 
 	request := changedTargetsRequest()
@@ -362,7 +362,7 @@ func TestGetChangedTargets_TGBAllTargetsNoTrigger(t *testing.T) {
 		Storage:      st,
 		Orchestrator: orchestratormock.NewMockOrchestrator(ctrl),
 		Scope:        scope,
-		GraphFormat:  config.GraphFormatTGB,
+		GraphConfig:  staticGraphConfig(config.GraphConfig{Format: config.GraphFormatTGB}),
 	})
 
 	request := changedTargetsRequest()
@@ -408,7 +408,7 @@ func TestGetChangedTargets_TGBMixedFormatFallsBack(t *testing.T) {
 		Storage:      st,
 		Orchestrator: orchestratormock.NewMockOrchestrator(ctrl),
 		Scope:        scope,
-		GraphFormat:  config.GraphFormatTGB,
+		GraphConfig:  staticGraphConfig(config.GraphConfig{Format: config.GraphFormatTGB}),
 	})
 
 	request := changedTargetsRequest()

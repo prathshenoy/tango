@@ -133,7 +133,7 @@ func (c *controller) GetChangedTargets(request *pb.GetChangedTargetsRequest, str
 		return fmt.Errorf("fetch target graphs: %w", err)
 	}
 
-	changedTargetsResponses, err := c.compareFetchedGraphs(ctx, e, logger, firstGraph, secondGraph, seedAttributesFor(repoCfg))
+	changedTargetsResponses, err := c.compareFetchedGraphs(ctx, e, logger, request.GetFirstRevision().GetRemote(), firstGraph, secondGraph, seedAttributesFor(repoCfg))
 	// Allow GC of raw graph data while the caching goroutine runs.
 	firstGraph = fetchedGraph{}
 	secondGraph = fetchedGraph{}
@@ -416,7 +416,7 @@ func (c *controller) cacheComparedTargets(logger *zap.Logger, request *pb.GetCha
 // graphs: TGB-native when both revisions came back as TGB blobs, otherwise
 // the incumbent chunk pipeline (gob blobs, or the transitional mixed case
 // where exactly one revision's blob predates a format flip).
-func (c *controller) compareFetchedGraphs(ctx context.Context, e *metrics.Emitter, logger *zap.Logger, first, second fetchedGraph, seedAttrs map[string]bool) ([]entity.GetChangedTargetsResponse, error) {
+func (c *controller) compareFetchedGraphs(ctx context.Context, e *metrics.Emitter, logger *zap.Logger, remote string, first, second fetchedGraph, seedAttrs map[string]bool) ([]entity.GetChangedTargetsResponse, error) {
 	if first.tgb != nil && second.tgb != nil {
 		firstATFH, err := first.tgb.TGB().AllTargetsFileHashes()
 		if err != nil {
@@ -434,7 +434,7 @@ func (c *controller) compareFetchedGraphs(ctx context.Context, e *metrics.Emitte
 			e.Counter(opGetChangedTargets, "all_targets_triggered").Inc(1)
 			return c.allTargetsChangedFromTGB(ctx, first.tgb.TGB(), second.tgb.TGB())
 		}
-		return c.compareTargetGraphsTGB(ctx, e, logger, first.tgb.TGB(), second.tgb.TGB(), seedAttrs)
+		return c.compareTargetGraphsTGB(ctx, e, logger, remote, first.tgb.TGB(), second.tgb.TGB(), seedAttrs)
 	}
 	firstChunks, err := first.materializeChunks()
 	if err != nil {
@@ -454,7 +454,7 @@ func (c *controller) compareFetchedGraphs(ctx context.Context, e *metrics.Emitte
 // ShadowCompare on, the incumbent targetdiff comparison additionally runs
 // over the same two readers in a background goroutine and any divergence is
 // logged and counted (see shadowCompareTGB).
-func (c *controller) compareTargetGraphsTGB(ctx context.Context, e *metrics.Emitter, logger *zap.Logger, before, after *tgb.Reader, seedAttrs map[string]bool) ([]entity.GetChangedTargetsResponse, error) {
+func (c *controller) compareTargetGraphsTGB(ctx context.Context, e *metrics.Emitter, logger *zap.Logger, remote string, before, after *tgb.Reader, seedAttrs map[string]bool) ([]entity.GetChangedTargetsResponse, error) {
 	compareStart := time.Now()
 	defer func() {
 		e.DurationHistogram(opGetChangedTargets, "compare_duration", metrics.SlowDurationBuckets).RecordDuration(time.Since(compareStart))
@@ -484,7 +484,7 @@ func (c *controller) compareTargetGraphsTGB(ctx context.Context, e *metrics.Emit
 		return nil, context.Cause(ctx)
 	}
 
-	if c.shadowCompare {
+	if c.shadowCompareFor(remote) {
 		// The goroutine only reads the readers and the result, and the
 		// remainder of the request only reads the result, so handing both
 		// over without copies is safe.

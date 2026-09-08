@@ -152,6 +152,7 @@ func startServerWithLogger(t testing.TB, remote string, zl *zap.Logger) string {
 		Storage:      store,
 		Orchestrator: orch,
 		RepoConfig:   cfg,
+		GraphConfig:  cfg,
 	})
 
 	grpcTransport := yarpcgrpc.NewTransport()

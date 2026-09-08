@@ -286,7 +286,7 @@ func TestGetRepositoryConfig(t *testing.T) {
 	assert.False(t, ok)
 }
 
-func TestParseBytes_GraphFormat(t *testing.T) {
+func TestParseBytes_GraphConfig(t *testing.T) {
 	base := func(extra string) []byte {
 		return []byte(`
 service:
@@ -295,22 +295,55 @@ service:
 ` + extra)
 	}
 
-	t.Run("defaults to gob", func(t *testing.T) {
+	t.Run("defaults to gob when graph section omitted", func(t *testing.T) {
 		cfg, err := ParseBytes(base(""))
 		require.NoError(t, err)
-		assert.Equal(t, GraphFormatGob, cfg.Service.GraphFormat)
-		assert.False(t, cfg.Service.ShadowCompare)
+		gc, err := cfg.GetGraphConfig("git@github:uber/tango")
+		require.NoError(t, err)
+		assert.Equal(t, GraphFormatGob, gc.Format)
+		assert.False(t, gc.ShadowCompare)
 	})
 
-	t.Run("accepts tgb with shadow compare", func(t *testing.T) {
-		cfg, err := ParseBytes(base("  graph_format: tgb\n  shadow_compare: true\n"))
+	t.Run("per-repo override", func(t *testing.T) {
+		cfg, err := ParseBytes(base(`
+graph:
+  default:
+    format: gob
+  uber/go-code:
+    format: tgb
+    shadow_compare: true
+`))
 		require.NoError(t, err)
-		assert.Equal(t, GraphFormatTGB, cfg.Service.GraphFormat)
-		assert.True(t, cfg.Service.ShadowCompare)
+
+		gc, err := cfg.GetGraphConfig("git@github:uber/go-code")
+		require.NoError(t, err)
+		assert.Equal(t, GraphFormatTGB, gc.Format)
+		assert.True(t, gc.ShadowCompare)
+
+		gc, err = cfg.GetGraphConfig("git@github:uber/other-repo")
+		require.NoError(t, err)
+		assert.Equal(t, GraphFormatGob, gc.Format)
+		assert.False(t, gc.ShadowCompare)
+	})
+
+	t.Run("error when no match and no default", func(t *testing.T) {
+		cfg, err := ParseBytes(base(`
+graph:
+  uber/go-code:
+    format: tgb
+`))
+		require.NoError(t, err)
+
+		_, err = cfg.GetGraphConfig("git@github:uber/other-repo")
+		require.ErrorContains(t, err, "no graph config")
 	})
 
 	t.Run("rejects unknown format", func(t *testing.T) {
-		_, err := ParseBytes(base("  graph_format: msgpack\n"))
-		require.ErrorContains(t, err, "graph_format")
+		_, err := ParseBytes(base(`
+graph:
+  default:
+    format: msgpack
+`))
+		require.ErrorContains(t, err, "format")
 	})
 }
