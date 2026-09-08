@@ -124,12 +124,12 @@ func TestGetChangedTargets_TGBNativePath(t *testing.T) {
 
 	scope := tally.NewTestScope("", nil)
 	c := NewController(context.Background(), Params{
-		RepoConfig:  allowAnyRepositoryConfigProvider{},
-		Logger:      zaptest.NewLogger(t),
-		Storage:     st,
+		RepoConfig:   allowAnyRepositoryConfigProvider{},
+		Logger:       zaptest.NewLogger(t),
+		Storage:      st,
 		Orchestrator: orchestratormock.NewMockOrchestrator(ctrl), // no calls expected: both graphs are cached
-		Scope:       scope,
-		GraphConfig: staticGraphConfig(config.GraphConfig{Format: config.GraphFormatTGB, ShadowCompare: true}),
+		Scope:        scope,
+		GraphConfig:  staticGraphConfig(config.GraphConfig{Format: config.GraphFormatTGB, ShadowCompare: true}),
 	})
 
 	request := changedTargetsRequest()
@@ -279,12 +279,12 @@ func TestGetChangedTargets_TGBAllTargetsTriggerPreservesMembershipChanges(t *tes
 
 	scope := tally.NewTestScope("", nil)
 	c := NewController(context.Background(), Params{
-		RepoConfig:  allowAnyRepositoryConfigProvider{},
-		Logger:      zaptest.NewLogger(t),
-		Storage:     st,
+		RepoConfig:   allowAnyRepositoryConfigProvider{},
+		Logger:       zaptest.NewLogger(t),
+		Storage:      st,
 		Orchestrator: orchestratormock.NewMockOrchestrator(ctrl),
-		Scope:       scope,
-		GraphConfig: staticGraphConfig(config.GraphConfig{Format: config.GraphFormatTGB}),
+		Scope:        scope,
+		GraphConfig:  staticGraphConfig(config.GraphConfig{Format: config.GraphFormatTGB}),
 	})
 
 	request := changedTargetsRequest()

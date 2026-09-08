@@ -38,8 +38,8 @@ type Params struct {
 	Logger          *zap.Logger
 	Storage         storage.Storage
 	Orchestrator    orchestrator.Orchestrator
-	Scope           tally.Scope               `optional:"true"`
-	MaxMessageBytes int                       `optional:"true"`
+	Scope           tally.Scope `optional:"true"`
+	MaxMessageBytes int         `optional:"true"`
 	RepoConfig      config.RepositoryConfigProvider
 	GraphConfig     config.GraphConfigProvider `optional:"true"`
 }
@@ -67,8 +67,8 @@ type controller struct {
 	orchestrator    orchestrator.Orchestrator
 	emitter         *metrics.Emitter
 	maxMessageBytes int
-	repoConfig  config.RepositoryConfigProvider
-	graphConfig config.GraphConfigProvider
+	repoConfig      config.RepositoryConfigProvider
+	graphConfig     config.GraphConfigProvider
 
 	// appCtx is the application lifetime; cancel it on process shutdown.
 	// Used by linkRequestCtx and any fire-and-forget goroutines so they
