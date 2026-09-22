@@ -250,6 +250,24 @@ func TestAddTargetAttributes(t *testing.T) {
 
 		assert.Empty(t, g.OptimizedTargets[aID].Attributes)
 	})
+
+	t.Run("nil attribute element does not panic", func(t *testing.T) {
+		t.Parallel()
+		targets := map[string]*targethasher.Target{
+			"//pkg:a": {
+				Name:     "//pkg:a",
+				RuleType: "go_library",
+				Attributes: []*buildpb.Attribute{
+					nil,
+					{Name: strPtr("importpath"), StringValue: strPtr("example.com/a"), Type: attrTypePtr(buildpb.Attribute_STRING)},
+				},
+			},
+		}
+		g := OptimizeGraph(targets)
+		aID := g.TargetNameToID["//pkg:a"]
+
+		assert.Len(t, g.OptimizedTargets[aID].Attributes, 1)
+	})
 }
 
 // --- OptimizedTarget.Copy ---

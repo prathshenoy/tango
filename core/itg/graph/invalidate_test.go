@@ -267,6 +267,23 @@ func TestUpsertTarget(t *testing.T) {
 		assert.False(t, ok, "non-string attribute should be skipped")
 	})
 
+	t.Run("nil attribute element does not panic on upsert", func(t *testing.T) {
+		t.Parallel()
+		g := OptimizeGraph(nil)
+		newTarget := &targethasher.Target{
+			Name:     "//pkg:lib",
+			RuleType: "go_library",
+			Attributes: []*buildpb.Attribute{
+				nil,
+				{Name: strPtr("importpath"), StringValue: strPtr("example.com/lib"), Type: attrTypePtr(buildpb.Attribute_STRING)},
+			},
+		}
+		require.NoError(t, g.upsertTarget(newTarget, NewIntSet()))
+
+		libID := g.TargetNameToID["//pkg:lib"]
+		assert.Len(t, g.OptimizedTargets[libID].Attributes, 1)
+	})
+
 	t.Run("attribute updates replace prior attributes on upsert", func(t *testing.T) {
 		t.Parallel()
 		g := OptimizeGraph(map[string]*targethasher.Target{

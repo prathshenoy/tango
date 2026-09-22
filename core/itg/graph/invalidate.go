@@ -165,7 +165,7 @@ func (g *OptimizedGraph) upsertTarget(target *targethasher.Target, invalidated I
 
 	attributes := make(map[int]int, len(target.Attributes))
 	for _, attr := range target.Attributes {
-		if attr.GetType() != buildpb.Attribute_STRING || attr.Name == nil || attr.StringValue == nil {
+		if attr == nil || attr.GetType() != buildpb.Attribute_STRING || attr.Name == nil || attr.StringValue == nil {
 			continue
 		}
 		attrNameID := getOrGenerateRecordReverse(*attr.Name, g.AttrNameToID, g.AttrNameIDToString)
