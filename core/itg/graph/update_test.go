@@ -116,6 +116,47 @@ func TestComputeAvailableHashes(t *testing.T) {
 		assert.Nil(t, targets[name].Hash, "full hash is not computed here — deps are needed")
 	})
 
+	t.Run("tags order does not affect rule HashWithoutDeps", func(t *testing.T) {
+		t.Parallel()
+		name := "//pkg:lib"
+		ruleName := name
+		ruleClass := "go_library"
+		tagsAttr := func(tags []string) *buildpb.Attribute {
+			typ := buildpb.Attribute_STRING_LIST
+			n := "tags"
+			return &buildpb.Attribute{Name: &n, Type: &typ, StringListValue: tags}
+		}
+
+		forward := map[string]*targethasher.Target{
+			name: {
+				Name:     name,
+				RuleType: "go_library",
+				Rule: &buildpb.Rule{
+					Name:      &ruleName,
+					RuleClass: &ruleClass,
+					Attribute: []*buildpb.Attribute{tagsAttr([]string{"a", "b"})},
+				},
+			},
+		}
+		reversed := map[string]*targethasher.Target{
+			name: {
+				Name:     name,
+				RuleType: "go_library",
+				Rule: &buildpb.Rule{
+					Name:      &ruleName,
+					RuleClass: &ruleClass,
+					Attribute: []*buildpb.Attribute{tagsAttr([]string{"b", "a"})},
+				},
+			},
+		}
+
+		require.NoError(t, computeAvailableHashes(context.Background(), &fakeSourceHasher{}, forward))
+		require.NoError(t, computeAvailableHashes(context.Background(), &fakeSourceHasher{}, reversed))
+
+		assert.Equal(t, forward[name].HashWithoutDeps, reversed[name].HashWithoutDeps,
+			"tags=[a,b] and tags=[b,a] should hash identically")
+	})
+
 	t.Run("source hasher error is propagated", func(t *testing.T) {
 		t.Parallel()
 		hasher := &fakeSourceHasher{err: assert.AnError}
