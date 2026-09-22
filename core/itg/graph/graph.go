@@ -112,6 +112,8 @@ type OptimizedGraph struct {
 	AttrNameIDToString  map[int]string `json:"attrNameIDToString"`
 	AttrValueToID       map[string]int `json:"attrValueToID"`
 	AttrValueIDToString map[int]string `json:"attrValueIDToString"`
+
+	AllTargetsFileHashes map[string]string `json:"allTargetsFileHashes,omitempty"`
 }
 
 // Copy makes a deep copy of OptimizedTarget.
@@ -190,6 +192,7 @@ func (g *OptimizedGraph) Copy() *OptimizedGraph {
 		AttrNameIDToString:  maps.Clone(g.AttrNameIDToString),
 		AttrValueToID:       maps.Clone(g.AttrValueToID),
 		AttrValueIDToString: maps.Clone(g.AttrValueIDToString),
+		AllTargetsFileHashes: maps.Clone(g.AllTargetsFileHashes),
 	}
 }
 

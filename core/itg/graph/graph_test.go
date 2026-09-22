@@ -182,6 +182,16 @@ func TestOptimizeGraph(t *testing.T) {
 		_, ok = g.TagToID["manual"]
 		assert.True(t, ok, "tag should be in TagToID")
 	})
+
+	t.Run("AllTargetsFileHashes is empty by default", func(t *testing.T) {
+		t.Parallel()
+		targets := map[string]*targethasher.Target{
+			"//pkg:a": {Name: "//pkg:a", RuleType: "go_library"},
+		}
+		g := OptimizeGraph(targets)
+
+		assert.Empty(t, g.AllTargetsFileHashes)
+	})
 }
 
 // --- OptimizedTarget.Copy ---
@@ -245,6 +255,36 @@ func TestOptimizedGraphCopy(t *testing.T) {
 	bID := g.TargetNameToID["//pkg:b"]
 	c.OptimizedTargets[bID].Hash = []byte{0xFF}
 	assert.NotEqual(t, []byte{0xFF}, g.OptimizedTargets[bID].Hash)
+}
+
+func TestOptimizedGraphCopyAllTargetsFileHashes(t *testing.T) {
+	t.Parallel()
+
+	t.Run("nil map copies as nil", func(t *testing.T) {
+		t.Parallel()
+		g := OptimizeGraph(nil)
+		c := g.Copy()
+		assert.Empty(t, c.AllTargetsFileHashes)
+	})
+
+	t.Run("populated map is deep-copied", func(t *testing.T) {
+		t.Parallel()
+		g := OptimizeGraph(nil)
+		g.AllTargetsFileHashes = map[string]string{"pkg/file.go": "hash1"}
+
+		c := g.Copy()
+		require.Equal(t, g.AllTargetsFileHashes, c.AllTargetsFileHashes)
+
+		// Mutating the copy does not affect the original.
+		c.AllTargetsFileHashes["pkg/file.go"] = "mutated"
+		c.AllTargetsFileHashes["new/file.go"] = "new"
+		assert.Equal(t, "hash1", g.AllTargetsFileHashes["pkg/file.go"])
+		assert.NotContains(t, g.AllTargetsFileHashes, "new/file.go")
+
+		// Mutating the original does not affect the copy.
+		g.AllTargetsFileHashes["pkg/file.go"] = "mutated-original"
+		assert.Equal(t, "mutated", c.AllTargetsFileHashes["pkg/file.go"])
+	})
 }
 
 // --- OptimizedTargetToTarget ---
