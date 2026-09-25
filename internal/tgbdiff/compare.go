@@ -376,8 +376,7 @@ func compareInternal(ctx context.Context, before, after *tgb.Reader, opts Option
 	// ── Phase 3a: build reverse CSR ──────────────────────────────────────────
 	t3 := time.Now()
 	nAfter := nAfterNodes
-	var csrDepBuf []int32
-	csrOffsets, csrTargets, err := buildReverseCSR(after, nAfter, &csrDepBuf)
+	csrOffsets, csrTargets, err := after.ReverseDepsCSR()
 	if err != nil {
 		return nil, phases, cnt, err
 	}
@@ -918,57 +917,4 @@ func attrsChanged(before, after map[string]string) bool {
 		}
 	}
 	return false
-}
-
-// ─── phase 3a: reverse CSR ───────────────────────────────────────────────────
-
-// buildReverseCSR builds the reverse adjacency of the after graph as a CSR
-// in three linear passes (count, prefix-sum, scatter).
-//
-// Returns (offsets, targets) where reverse neighbours of node i are
-// targets[offsets[i]:offsets[i+1]].
-//
-// depBuf is a scratch buffer reused across calls to avoid allocation.
-func buildReverseCSR(after *tgb.Reader, n int, depBuf *[]int32) (offsets []int32, targets []int32, err error) {
-	// Decode the forward edges once into CSR form. Calling Deps per node walks
-	// the reader's offset table twice over and allocates per node; DepsCSR is a
-	// single sequential pass over the column.
-	fwdOff, fwdTgt, err := after.DepsCSR()
-	if err != nil {
-		return nil, nil, err
-	}
-
-	// Pass 1: count in-degrees.
-	inDeg := make([]int32, n)
-	for _, d := range fwdTgt {
-		if d >= 0 && int(d) < n {
-			inDeg[d]++
-		}
-	}
-
-	// Pass 2: prefix-sum → offsets (length n+1).
-	offsets = make([]int32, n+1)
-	var total int32
-	for i := 0; i < n; i++ {
-		offsets[i] = total
-		total += inDeg[i]
-	}
-	offsets[n] = total
-
-	// Pass 3: scatter edges.
-	targets = make([]int32, total)
-	pos := make([]int32, n)
-	copy(pos, offsets[:n])
-
-	for i := 0; i < n && i+1 < len(fwdOff); i++ {
-		for k := fwdOff[i]; k < fwdOff[i+1]; k++ {
-			d := fwdTgt[k]
-			if d >= 0 && int(d) < n {
-				targets[pos[d]] = int32(i)
-				pos[d]++
-			}
-		}
-	}
-
-	return offsets, targets, nil
 }

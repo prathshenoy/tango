@@ -3,6 +3,7 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "tgb",
     srcs = [
+        "dependents.go",
         "dict.go",
         "encode.go",
         "format.go",
@@ -23,6 +24,7 @@ go_library(
 go_test(
     name = "tgb_test",
     srcs = [
+        "dependents_test.go",
         "fuzz_test.go",
         "hashwidth_test.go",
         "sentinel_test.go",

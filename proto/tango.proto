@@ -250,6 +250,23 @@ message GetChangedTargetGraphResponse {
     }
 }
 
+// GetDependentTargetsRequest identifies targets and the graph revision used to
+// find their reverse dependencies.
+message GetDependentTargetsRequest {
+    // The graph revision to traverse.
+    BuildDescription build_description = 1;
+    // Bazel target labels whose transitive dependents should be returned.
+    repeated string targets = 2;
+    // When true, skip graph cache reads and recompute the graph.
+    bool bypass_cache = 3;
+}
+
+// GetDependentTargetsResponse contains one message-size-bounded batch of
+// target labels that transitively depend on the requested targets.
+message GetDependentTargetsResponse {
+    repeated string targets = 1;
+}
+
 // Tango is the service for analyzing build target graphs and services. It is an abstraction over the underlying build system like Bazel,
 // enabling quick understanding of the dependencies between software building blocks and changes across source code revisions.
 service Tango {
@@ -258,6 +275,9 @@ service Tango {
 
     // Return a set of targets changed between two revisions
     rpc GetChangedTargets(GetChangedTargetsRequest) returns (stream GetChangedTargetsResponse) {}
+
+    // Return targets that transitively depend on the supplied targets.
+    rpc GetDependentTargets(GetDependentTargetsRequest) returns (stream GetDependentTargetsResponse) {}
 
     // NOT YET IMPLEMENTED — returns Unimplemented.
     // Return a full target graph across two revisions with change indicator for each target. It differs from GetChangedTargets in that a full target graph can be constructed for either base or target revision.
