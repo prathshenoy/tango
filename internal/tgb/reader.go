@@ -906,6 +906,41 @@ func (r *Reader) DepsCSR() (offsets []int32, targets []int32, err error) {
 	return offsets, targets, nil
 }
 
+// ReverseDepsCSR returns the graph's reverse dependencies in compressed sparse
+// row form. The dependents of node i are targets[offsets[i]:offsets[i+1]].
+func (r *Reader) ReverseDepsCSR() (offsets []int32, targets []int32, err error) {
+	forwardOffsets, forwardTargets, err := r.DepsCSR()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	n := r.NodeCount()
+	inDegree := make([]int32, n)
+	for _, dependency := range forwardTargets {
+		if dependency >= 0 && int(dependency) < n {
+			inDegree[dependency]++
+		}
+	}
+
+	offsets = make([]int32, n+1)
+	for i := range inDegree {
+		offsets[i+1] = offsets[i] + inDegree[i]
+	}
+
+	targets = make([]int32, offsets[n])
+	next := append([]int32(nil), offsets[:n]...)
+	for id := 0; id < n; id++ {
+		for i := forwardOffsets[id]; i < forwardOffsets[id+1]; i++ {
+			dependency := forwardTargets[i]
+			if dependency >= 0 && int(dependency) < n {
+				targets[next[dependency]] = int32(id)
+				next[dependency]++
+			}
+		}
+	}
+	return offsets, targets, nil
+}
+
 // Tags returns the tag dict IDs for node i, appended to buf.
 func (r *Reader) Tags(node int, buf []int32) []int32 {
 	degs, offsets, tagsData, err := r.ensureTagOffsets()

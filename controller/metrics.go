@@ -18,5 +18,6 @@ package controller
 const (
 	opGetTargetGraph        = "get_target_graph"
 	opGetChangedTargets     = "get_changed_targets"
+	opGetDependentTargets   = "get_dependent_targets"
 	opGetChangedTargetGraph = "get_changed_target_graph"
 )
